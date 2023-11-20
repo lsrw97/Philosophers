@@ -36,6 +36,7 @@ typedef struct t_philo
 	struct t_philo		*next;
 	struct t_philo		*prev;
 	struct t_status		*status;
+	pthread_mutex_t		mutex_fork;
 	int					meals;
 	int					hasfork;
 	int					mode;

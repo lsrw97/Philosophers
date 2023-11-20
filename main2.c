@@ -96,6 +96,7 @@ t_philo	*ft_newnode(int life, t_philo *prev, int index, t_status *status)
 		philo->mode = EAT;
 	else
 		philo->mode = THINK;
+	pthread_mutex_init(&philo->mutex_fork, NULL);
 	philo->hasfork = 0;
 	philo->index = index;
 	philo->next = NULL;
@@ -154,6 +155,26 @@ int	allfull(t_philo *table)
 	return (1);
 }
 
+void	takeforks(t_philo *philo)
+{
+	while (1)
+	{
+		pthread_mutex_lock(&philo->mutex_fork);
+		pthread_mutex_lock(&philo->next->mutex_fork);
+		if (!philo->hasfork && !philo->next->hasfork)
+		{
+			printf("%d %d has taken a fork\n", philo->status->currenttime, philo->index);
+			printf("%d %d has taken a fork\n", philo->status->currenttime, philo->index);
+			philo->hasfork = 1;
+			philo->next->hasfork = 1;
+			pthread_mutex_unlock(&philo->mutex_fork);
+			pthread_mutex_unlock(&philo->next->mutex_fork);
+		}
+		pthread_mutex_unlock(&philo->mutex_fork);
+		pthread_mutex_unlock(&philo->next->mutex_fork);
+	}
+}
+
 void	*routine(void *arg)
 {
 	t_philo	*philo;
@@ -173,26 +194,23 @@ void	*routine(void *arg)
 		
 		if (!philo->hasfork && !philo->next->hasfork && philo->meals != philo->status->meals)
 		{
-		printf("%d %d has taken a fork\n", philo->status->currenttime, philo->index);
-		printf("%d %d has taken a fork\n", philo->status->currenttime, philo->index);
-		philo->hasfork = 1;
-		philo->next->hasfork = 1;
-		philo->mode = EAT;
-		printf("%d %d is eating\n", philo->status->currenttime, philo->index);
-		ft_sleep(philo->status->eattime, get_time());
-		philo->lastmeal = get_time() - philo->status->time;
-		philo->meals++;
-		// printf("meal: %d, %d\n", philo->meals, philo->index);
-		if (allfull(philo))
-		{
-			// printf("full");
-			return (NULL);
-		}
-		philo->hasfork = 0;
-		philo->next->hasfork = 0;
-		philo->mode = SLEEP;
-		printf("%d %d is sleeping\n", philo->status->currenttime, philo->index);
-		ft_sleep(philo->status->sleeptime, get_time());
+			takeforks(philo);
+			philo->mode = EAT;
+			printf("%d %d is eating\n", philo->status->currenttime, philo->index);
+			ft_sleep(philo->status->eattime, get_time());
+			philo->lastmeal = get_time() - philo->status->time;
+			philo->meals++;
+			// printf("meal: %d, %d\n", philo->meals, philo->index);
+			if (allfull(philo))
+			{
+				// printf("full");
+				return (NULL);
+			}
+			philo->hasfork = 0;
+			philo->next->hasfork = 0;
+			philo->mode = SLEEP;
+			printf("%d %d is sleeping\n", philo->status->currenttime, philo->index);
+			ft_sleep(philo->status->sleeptime, get_time());
 		}
 		// pthread_mutex_unlock(&philo->status->mutex);
 	}
@@ -245,4 +263,3 @@ int main (int argc, char **argv)
 
 	return 0;
 }
-
