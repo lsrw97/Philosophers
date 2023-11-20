@@ -78,8 +78,9 @@ t_status	*init_status(char **argv, t_status *status, t_philo *table)
 	status->meals = ft_atoi(argv[5]);
 	status->time = get_time();
 	status->table = table;
+	status->dead = 0;
 	status->currenttime = status->time;
-	pthread_mutex_init(&status->mutex, NULL);
+	pthread_mutex_init(&status->deathmutex, NULL);
 	return status;
 }
 
@@ -97,11 +98,13 @@ t_philo	*ft_newnode(int life, t_philo *prev, int index, t_status *status)
 	else
 		philo->mode = THINK;
 	pthread_mutex_init(&philo->mutex_fork, NULL);
+	pthread_mutex_init(&philo->mutex_printf, NULL);
 	philo->hasfork = 0;
 	philo->index = index;
 	philo->next = NULL;
 	philo->prev = prev;
 	philo->lastmeal = 0;
+	philo->dead = 0;
 	return (philo);
 }
 
@@ -124,34 +127,20 @@ t_philo	*createtable(int size, char **argv, t_status *status)
 	return (table);
 }
 
-void    *checker(void *arg)
-{
-	t_philo *table;
-
-	table = (t_philo *)arg;
-	while (getms(table->status->time) - table->lastmeal < table->status->lifetime)
-	{
-		table = table->next;
-		table->status->currenttime = getms(table->status->time);
-	}
-	printf("%d %d died\n", table->status->currenttime, table->index);
-	table->mode = DEAD;
-	return NULL;
-}
-
 int	allfull(t_philo *table)
 {
 	t_philo *tmp;
 
 	tmp = table;
-	while (tmp->next->index != table->index)
+	if (tmp->meals != tmp->status->meals)
+		return (0);
+	tmp = tmp->next;
+	while (tmp != table)
 	{
 		if (tmp->meals != tmp->status->meals)
 			return (0);
 		tmp = tmp->next;
 	}
-	if (tmp->meals != tmp->status->meals)
-			return (0);
 	return (1);
 }
 
@@ -160,19 +149,76 @@ void	takeforks(t_philo *philo)
 	while (1)
 	{
 		pthread_mutex_lock(&philo->mutex_fork);
-		pthread_mutex_lock(&philo->next->mutex_fork);
+		// pthread_mutex_lock(&philo->next->mutex_fork);
 		if (!philo->hasfork && !philo->next->hasfork)
 		{
-			printf("%d %d has taken a fork\n", philo->status->currenttime, philo->index);
-			printf("%d %d has taken a fork\n", philo->status->currenttime, philo->index);
+			printf("%lld %d has taken a fork\n", philo->status->currenttime, philo->index);
+			printf("%lld %d has taken a fork\n", philo->status->currenttime, philo->index);
 			philo->hasfork = 1;
 			philo->next->hasfork = 1;
 			pthread_mutex_unlock(&philo->mutex_fork);
-			pthread_mutex_unlock(&philo->next->mutex_fork);
+			// pthread_mutex_unlock(&philo->next->mutex_fork);
+			break ;
 		}
 		pthread_mutex_unlock(&philo->mutex_fork);
-		pthread_mutex_unlock(&philo->next->mutex_fork);
+		// pthread_mutex_unlock(&philo->next->mutex_fork);
 	}
+}
+
+
+void    *checker(void *arg)
+{
+	t_philo *table;
+
+	table = (t_philo *)arg;
+	// pthread_mutex_lock(&table->status->mutex);
+	while (getms(table->status->time) - table->lastmeal < table->status->lifetime)
+	{
+		table = table->next;
+		table->status->currenttime = getms(table->status->time);
+	}
+	printf("%lld %d died\n", table->status->currenttime, table->index);
+	// pthread_mutex_lock(&table->status->mutex);
+	// pthread_mutex_lock(&table->mutex_printf);
+	table->mode = DEAD;
+	table->status->dead = 1;
+	// pthread_mutex_unlock(&table->mutex_printf);
+	return NULL;
+}
+
+int	jointhreads(pthread_t   *threads, int size)
+{
+	int	i;
+
+	i = -1;
+	while (++i < size)
+	{
+		// printf("%d joined\n", i);
+		pthread_join(threads[i], NULL);
+	}
+	return (1);
+}
+
+int	checkforrunning(t_philo *table)
+{
+	t_philo *tmp;
+	
+	tmp = table;
+	pthread_mutex_lock(&table->status->deathmutex);
+	if (!tmp->dead)
+		return (0);
+	pthread_mutex_unlock(&table->status->deathmutex);
+	tmp = tmp->next;
+	while (tmp != table)
+	{
+		pthread_mutex_lock(&table->status->deathmutex);
+		if (!tmp->dead)
+			return (0);
+		pthread_mutex_unlock(&table->status->deathmutex);
+		tmp = tmp->next;
+	}
+
+	return (1);	
 }
 
 void	*routine(void *arg)
@@ -182,39 +228,55 @@ void	*routine(void *arg)
 	philo = (t_philo *)arg;
 	while (1)
 	{
-		while (philo->next->mode == EAT || philo->next->hasfork || philo->index % 2 && philo->prev->mode == EAT && philo->next->index % 2)
-		{
-			if (philo->mode != THINKING)
-			{
-				philo->mode = THINKING;
-				printf("%d %d is thinking\n", philo->status->currenttime, philo->index);
-			}
-		}
+		// if (philo->status->dead)
+		// 	{
+		// 		// printf("%d died\n", philo->index);
+		// 		philo->dead = 1;
+		// 		return (0);
+		// 	}
 		// pthread_mutex_lock(&philo->status->mutex);
+		// while (philo->next->mode == EAT || philo->next->hasfork || philo->index % 2 &&
+		//  philo->prev->mode == EAT && philo->next->index % 2)
+		// {
+		// 	if (philo->status->dead)
+		// 	{
+		// 		philo->dead = 1;
+		// 		return (0);
+		// 	}
+		// 	if (philo->mode != THINKING)
+		// 	{
+		// 		philo->mode = THINKING;
+		// 		printf("%lld %d is thinking\n", philo->status->currenttime, philo->index);
+		// 	}
+		// }
+		// pthread_mutex_lock(&philo->status->mutex);		
+		// if (!philo->hasfork && !philo->next->hasfork && philo->meals != philo->status->meals)
+		// {
+		// 	takeforks(philo);
+		// 	philo->mode = EAT;
+		// 	printf("%lld %d is eating\n", philo->status->currenttime, philo->index);
+		// 	ft_sleep(philo->status->eattime, get_time());
+		// 	philo->lastmeal = get_time() - philo->status->time;
+		// 	philo->meals++;
+		// 	// printf("meal: %d, %d\n", philo->meals, philo->index);
+		// 	if (allfull(philo))
+		// 	{
+		// 		// printf("full");
+		// 		return (NULL);
+		// 	}
+		// 	philo->hasfork = 0;
+		// 	philo->next->hasfork = 0;
+		// 	philo->mode = SLEEP;
+		// 	printf("%lld %d is sleeping\n", philo->status->currenttime, philo->index);
+		// 	ft_sleep(philo->status->sleeptime, get_time());
 		
-		if (!philo->hasfork && !philo->next->hasfork && philo->meals != philo->status->meals)
-		{
-			takeforks(philo);
-			philo->mode = EAT;
-			printf("%d %d is eating\n", philo->status->currenttime, philo->index);
-			ft_sleep(philo->status->eattime, get_time());
-			philo->lastmeal = get_time() - philo->status->time;
-			philo->meals++;
-			// printf("meal: %d, %d\n", philo->meals, philo->index);
-			if (allfull(philo))
-			{
-				// printf("full");
-				return (NULL);
-			}
-			philo->hasfork = 0;
-			philo->next->hasfork = 0;
-			philo->mode = SLEEP;
-			printf("%d %d is sleeping\n", philo->status->currenttime, philo->index);
-			ft_sleep(philo->status->sleeptime, get_time());
-		}
-		// pthread_mutex_unlock(&philo->status->mutex);
-	}
+		// }
+			// pthread_mutex_unlock(&philo->status->mutex);
+	pthread_mutex_lock(&philo->status->deathmutex);
+	philo->dead = 1;
+	pthread_mutex_unlock(&philo->status->deathmutex);
 	return NULL;
+	}
 }
 
 int	createthreads(t_philo *table, pthread_t *philos)
@@ -254,12 +316,19 @@ int main (int argc, char **argv)
     // Thread that checks if any philo is DEAD
 
 	pthread_create(&check, NULL, &checker, table);
-	// pthread_create(&philos[0], NULL, &routine, table);
-	// pthread_create(&philos[1], NULL, &routine, table->next);
-	// pthread_create(&philos[2], NULL, &routine, table->next->next);
+
 	createthreads(table, philos);
-	if(!pthread_join(check, NULL))
-		return 0;
+
+	while (1)
+	{
+		if (checkforrunning(table));
+		{
+			jointhreads(philos, ft_atoi(argv[1]));
+			break ;
+		}
+	}
+	pthread_join(check, NULL);
+	free(philos);
 
 	return 0;
 }

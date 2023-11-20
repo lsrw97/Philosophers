@@ -11,13 +11,11 @@ AR		= ar rcs
 
 RM		= rm -rf
 
-# CFLAGS	= -Wall -Wextra -Werror -fsanitize=address -g
-
+CFLAGS		=	 -I$(INC) -g -fsanitize=thread #  -fsanitize=address
 all:	philo
 
 philo: ${NAME}
 	gcc ${NAME} ${CFLAGS} -o philo
-
 
 $(NAME):	$(OBJS)
 	ar rcs ${NAME} ${OBJS}
