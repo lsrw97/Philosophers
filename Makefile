@@ -1,9 +1,15 @@
 
-SRCS	=	main2.c
+SRCS	=	main2.c \
+			getter1.c \
+			getter2.c \
+			setter.c \
+			createinit.c \
+			time.c \
+			utils.c \
 
 OBJS	= ${SRCS:.c=.o}
 
-NAME	= philo2.a
+NAME	= philo.a
 
 CC		= gcc
 
@@ -11,7 +17,7 @@ AR		= ar rcs
 
 RM		= rm -rf
 
-CFLAGS		=	 -I$(INC) -g -fsanitize=thread #  -fsanitize=address
+CFLAGS		=	 -I$(INC) -g -fsanitize=address #  -fsanitize=address
 all:	philo
 
 philo: ${NAME}

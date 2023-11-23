@@ -1,16 +1,16 @@
-102 1 is thinking
-102 2 has taken a fork
-102 2 has taken a fork
-103 3 is thinking
-103 4 has taken a fork
-103 4 has taken a fork
-104 5 is thinking
-104 6 has taken a fork
-104 6 has taken a fork
-105 7 is thinking
-105 8 has taken a fork
-105 8 has taken a fork
-107 9 is thinking
-107 10 has taken a fork
-107 10 has taken a fork
-799 8 died
+0 1 is sleeping
+0 2 has taken a fork
+0 2 has taken a fork
+0 2 is eating
+0 3 is sleeping
+60 2 is sleeping
+60 3 has taken a fork
+60 3 has taken a fork
+60 3 is eating
+60 1 is thinking
+120 3 is sleeping
+120 1 has taken a fork
+120 1 has taken a fork
+120 1 is eating
+120 2 is thinking
+130 1 died
